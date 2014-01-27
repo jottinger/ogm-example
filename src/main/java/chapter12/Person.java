@@ -10,7 +10,7 @@ import javax.persistence.*;
 public class Person {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Field
+    @Field(name = "id")
     Integer id;
     @Field
     @Column

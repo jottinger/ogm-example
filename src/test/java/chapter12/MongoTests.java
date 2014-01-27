@@ -4,14 +4,18 @@ import com.mongodb.DB;
 import com.mongodb.Mongo;
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.hibernate.search.jpa.FullTextEntityManager;
+import org.hibernate.search.jpa.FullTextQuery;
+import org.hibernate.search.jpa.Search;
+import org.hibernate.search.query.DatabaseRetrievalMethod;
+import org.hibernate.search.query.ObjectLookupMethod;
+import org.hibernate.search.query.dsl.QueryBuilder;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import javax.persistence.EntityManager;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.testng.Assert.*;
 
@@ -97,7 +101,7 @@ public class MongoTests extends BaseOGMTests {
     }
 
     @Test
-    public void testQuery() {
+    public void testQueryHQL() {
         Map<Integer, Person> people = new HashMap<>();
         EntityManager em = getEntityManager();
         em.getTransaction().begin();
@@ -138,6 +142,49 @@ public class MongoTests extends BaseOGMTests {
         q.setString("name", "user 4");
         p = (Person) q.uniqueResult();
         assertEquals(p, people.get(4));
+        em.getTransaction().commit();
+        em.close();
+    }
+
+    @Test
+    public void testQueryLucene() {
+        Map<Integer, Person> people = new HashMap<>();
+        EntityManager em = getEntityManager();
+        em.getTransaction().begin();
+
+        for (int i = 7; i < 9; i++) {
+            people.put(i, new Person("user " + i, i));
+            em.persist(people.get(i));
+        }
+
+        em.getTransaction().commit();
+        em.close();
+
+        em = getEntityManager();
+        em.getTransaction().begin();
+        FullTextEntityManager ftem = Search.getFullTextEntityManager(em);
+
+        //Optionally use the QueryBuilder to simplify Query definition:
+        QueryBuilder b = ftem.getSearchFactory()
+                .buildQueryBuilder()
+                .forEntity(Person.class)
+                .get();
+        org.apache.lucene.search.Query lq =
+                b.keyword().onField("id").matching(people.get(7).getId()).createQuery();
+
+        //Transform the Lucene Query in a JPA Query:
+        FullTextQuery ftQuery = ftem.createFullTextQuery(lq, Person.class);
+        //This is a requirement when using Hibernate OGM instead of ORM:
+        ftQuery.initializeObjectsWith(ObjectLookupMethod.SKIP,
+                DatabaseRetrievalMethod.FIND_BY_ID);
+
+        //List all matching Hypothesis:
+        List<Person> resultList = ftQuery.getResultList();
+        System.out.println(resultList);
+        // lucene can return multiple results for a given query!
+        Set<Person> personSet=new HashSet<>();
+        personSet.addAll(resultList);
+        assertEquals(personSet.size(), 1);
         em.getTransaction().commit();
         em.close();
     }
