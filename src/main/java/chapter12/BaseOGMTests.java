@@ -1,5 +1,7 @@
 package chapter12;
 
+import org.testng.annotations.AfterMethod;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -13,4 +15,5 @@ public abstract class BaseOGMTests {
         }
         return factory.createEntityManager();
     }
+
 }
