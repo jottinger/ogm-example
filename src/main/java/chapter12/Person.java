@@ -1,5 +1,6 @@
 package chapter12;
 
+import org.hibernate.search.annotations.Analyze;
 import org.hibernate.search.annotations.Field;
 import org.hibernate.search.annotations.Indexed;
 
@@ -15,7 +16,7 @@ public class Person {
     @Field
     @Column
     String name;
-    @Field
+    @Field(analyze= Analyze.NO)
     @Column
     Integer balance;
 
